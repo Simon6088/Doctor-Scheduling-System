@@ -10,6 +10,7 @@ export function request(options) {
         uni.request({
             url: BASE_URL + options.url,
             method: options.method || 'GET',
+            timeout: 100000,
             data: options.data,
             header: {
                 'Authorization': token ? `Bearer ${token}` : '',

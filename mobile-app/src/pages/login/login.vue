@@ -49,6 +49,7 @@ export default {
         uni.request({
             url: requestUrl,
             method: 'POST',
+            timeout: 100000, // 增加超时时间至 100s 以应对 Render 冷启动
             header: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
