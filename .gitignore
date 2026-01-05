@@ -1,0 +1,34 @@
+# System
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env
+db.sqlite3
+backend/__pycache__/
+backend/venv/
+backend/.venv/
+backend/.env
+backend/.pytest_cache/
+
+# Node / Frontend
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# UniApp
+mobile-app/unpackage/
+mobile-app/dist/
+
+# Logs
+*.log
