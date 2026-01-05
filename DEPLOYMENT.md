@@ -15,6 +15,7 @@
 2.  获取 **Database URL** (Connection String):
     *   Settings -> Database -> Connection string -> URI.
     *   格式: `postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`
+    postgresql://postgres:f3vI2Th583n5usPF@db.chfdfarbajbwncourwzk.supabase.co:5432/postgres
 
 ## 2. 后端部署 (Render 示例)
 
@@ -48,6 +49,18 @@
 5.  **Environment Variables**:
     *   `VITE_API_BASE_URL`: 同上 (注意: UniApp 需要在代码中读取环境变变量，可能需要修改 request.js 适配 Vercel env 注入方式，通常使用 `import.meta.env`).
 6.  Deploy.
+
+## 4. 常见问题 (Troubleshooting)
+
+### 无法连接数据库 (Network is unreachable / IPv6)
+如果 Render 报错 `psycopg2.OperationalError ... Network is unreachable` (且显示 IPv6 地址)，这是因为 Supabase 直连地址 (`db.xxx.supabase.co`) 解析到了 IPv6，而 Render 容器网络对此支持不佳。
+
+**解决方法**: 改用 Supabase **Connection Pooler (IPv4)** 地址。
+1.  进入 Supabase Dashboard -> **Settings** -> **Database**.
+2.  找到 **Connection Pooling** (或直接看 Connection String -> URI -> 把 Port 改为 **6543**，或者勾选 "Use connection pooling")。
+3.  通常 Connection String 格式类似: `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true`.
+    *   关键是 **Port 6543** 和域名 (可能是 pooler 域名或原域名但走 Pooler)。
+4.  更新 Render 的 `DATABASE_URL` 环境变量为这个新地址。
 
 ---
 
