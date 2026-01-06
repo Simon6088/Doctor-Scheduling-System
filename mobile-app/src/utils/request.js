@@ -1,4 +1,4 @@
-const BASE_URL = 'http://127.0.0.1:8000'; // Make sure to use IP if testing on real device, localhost for simulator
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function request(options) {
     const token = uni.getStorageSync('token');
@@ -7,7 +7,7 @@ export function request(options) {
 
     return new Promise((resolve, reject) => {
         uni.request({
-            url: '/api' + options.url, // 使用代理前缀
+            url: BASE_URL + options.url, // Use configured base URL
             method: options.method || 'GET',
             data: options.data,
             header: {
