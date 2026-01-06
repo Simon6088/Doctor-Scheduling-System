@@ -86,15 +86,41 @@ def respond_to_trade(
         
     action = response.action
     if action == "accept":
-        trade.status = models.TradeStatus.ACCEPTED
-        # Notify Requester
-        requester = db.query(models.User).get(trade.requester_id)
-        notif = models.Notification(
-            user_id=trade.requester_id,
-            content=f"{current_user.full_name} 已同意您的换班请求，等待管理员审批",
-            type=models.NotificationType.TRADE_RESULT
-        )
-        db.add(notif)
+        # Check schedule status for Auto-Approve logic (Draft = Auto)
+        schedule = db.query(models.Schedule).filter(models.Schedule.id == trade.request_shift_id).first()
+        
+        if schedule and schedule.status == 'draft':
+            # Auto Approve and Execute
+            trade.status = models.TradeStatus.APPROVED
+            schedule.doctor_id = trade.target_doctor_id
+            
+            # Notify Both
+            requester = db.query(models.User).get(trade.requester_id)
+            notif1 = models.Notification(
+                user_id=trade.requester_id,
+                content=f"{current_user.full_name} 已同意并确认您的换班请求 (排班发布前)",
+                type=models.NotificationType.TRADE_RESULT
+            )
+            notif2 = models.Notification(
+                user_id=trade.target_doctor_id,
+                content=f"已自动确认您与 {requester.full_name} 的换班 (排班发布前)",
+                type=models.NotificationType.TRADE_RESULT
+            )
+            db.add(notif1)
+            db.add(notif2)
+            
+        else:
+            # Pending Admin Approval
+            trade.status = models.TradeStatus.ACCEPTED
+            # Notify Requester
+            requester = db.query(models.User).get(trade.requester_id)
+            notif = models.Notification(
+                user_id=trade.requester_id,
+                content=f"{current_user.full_name} 已同意您的换班请求，等待管理员审批",
+                type=models.NotificationType.TRADE_RESULT
+            )
+            db.add(notif)
+            
     elif action == "reject":
         trade.status = models.TradeStatus.REJECTED
         # Notify Requester

@@ -4,6 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>排班管理</span>
+          <el-button type="success" @click="showPublishDialog = true">发布排班</el-button>
           <el-button type="primary" @click="showDialog = true">生成排班</el-button>
         </div>
       </template>
@@ -35,6 +36,7 @@
       </el-table>
     </el-card>
 
+    <!-- Generate Dialog -->
     <el-dialog v-model="showDialog" title="生成排班" width="500px">
       <el-form :model="generateForm" label-width="100px">
         <el-form-item label="开始日期">
@@ -49,6 +51,23 @@
         <el-button type="primary" @click="handleGenerate" :loading="generating">生成</el-button>
       </template>
     </el-dialog>
+
+    <!-- Publish Dialog -->
+    <el-dialog v-model="showPublishDialog" title="发布排班" width="500px">
+      <el-form :model="publishForm" label-width="100px">
+        <el-alert title="发布后医生可见，且换班需审批" type="warning" :closable="false" style="margin-bottom:20px;" />
+        <el-form-item label="开始日期">
+            <el-date-picker v-model="publishForm.startDate" type="date" />
+        </el-form-item>
+        <el-form-item label="结束日期">
+            <el-date-picker v-model="publishForm.endDate" type="date" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showPublishDialog = false">取消</el-button>
+        <el-button type="success" @click="handlePublish" :loading="publishing">确认发布</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -61,10 +80,20 @@ const schedules = ref([]);
 const doctors = ref([]);
 const shiftTypes = ref([]);
 const showDialog = ref(false);
+const showPublishDialog = ref(false);
 const generating = ref(false);
+const publishing = ref(false);
 const generateForm = ref({
   startDate: new Date().toISOString().split('T')[0],
   days: 7
+});
+// Default publish range: Current Month? Or Next 30 days?
+const today = new Date();
+const nextMonth = new Date();
+nextMonth.setDate(today.getDate() + 30);
+const publishForm = ref({
+    startDate: today.toISOString().split('T')[0],
+    endDate: nextMonth.toISOString().split('T')[0]
 });
 
 const fetchSchedules = async () => {
@@ -141,6 +170,23 @@ const handleGenerate = async () => {
   }
 };
 
+
+const handlePublish = async () => {
+  publishing.value = true;
+  try {
+    const s = publishForm.value.startDate.toISOString ? publishForm.value.startDate.toISOString().split('T')[0] : publishForm.value.startDate;
+    const e = publishForm.value.endDate.toISOString ? publishForm.value.endDate.toISOString().split('T')[0] : publishForm.value.endDate;
+    
+    await api.post(`/schedules/publish?start_date=${s}&end_date=${e}`);
+    ElMessage.success('发布成功');
+    showPublishDialog.value = false;
+    await fetchSchedules();
+  } catch (error) {
+    ElMessage.error('发布失败');
+  } finally {
+    publishing.value = false;
+  }
+};
 
 const handleDelete = async (id) => {
   try {

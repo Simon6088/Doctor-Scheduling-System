@@ -70,6 +70,29 @@ def generate_schedule(
     
     return saved_schedules
 
+@router.post("/schedules/publish")
+def publish_schedules(
+    start_date: date,
+    end_date: date,
+    department_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_user)
+):
+    query = db.query(models.Schedule).filter(
+        models.Schedule.date >= start_date,
+        models.Schedule.date <= end_date,
+        models.Schedule.status == 'draft'
+    )
+    
+    if department_id:
+        query = query.join(models.User).filter(models.User.department_id == department_id)
+        
+    count = query.update({models.Schedule.status: 'published'}, synchronize_session=False)
+    db.commit()
+    
+    log_action(db, current_user.id, "PUBLISH", "schedule", details=f"Published {count} schedules from {start_date} to {end_date}")
+    return {"message": f"Successfully published {count} schedules"}
+
 @router.get("/schedules/", response_model=List[schemas.ScheduleSchema])
 def read_schedules(
     start_date: Optional[date] = None,
@@ -80,6 +103,11 @@ def read_schedules(
     current_user: models.User = Depends(get_current_user)
 ):
     query = db.query(models.Schedule)
+    
+    # Non-admins can only see published schedules
+    if current_user.role != models.RoleEnum.ADMIN:
+        query = query.filter(models.Schedule.status == "published")
+        
     if start_date:
         query = query.filter(models.Schedule.date >= start_date)
     if end_date:
