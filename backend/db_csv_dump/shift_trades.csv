@@ -1,0 +1,6 @@
+﻿id,requester_id,request_shift_id,target_doctor_id,status,reason,created_at
+3,40,2,3,pending,,2026-01-05 06:42:31.149061
+4,40,2,3,pending,,2026-01-05 06:46:28.842095
+5,40,29,7,pending,换班申请,2026-01-05 11:31:15.031475
+2,40,2,4,approved,有事,2026-01-05 06:41:35.334424
+1,40,2,2,accepted,家中有事,2026-01-05 06:12:07.774595

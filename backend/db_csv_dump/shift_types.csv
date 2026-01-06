@@ -1,0 +1,5 @@
+﻿id,name,start_time,end_time,weight,required_qualification,shift_category,description
+1,Day Shift,08:00,17:00,1,,day,
+3,白班,08:00,17:00,1,,day,正常白班
+4,夜班,17:00,08:00,2,,night,夜间值班
+2,体检,07:30,17:00,1,,day,

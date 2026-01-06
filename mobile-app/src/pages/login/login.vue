@@ -37,19 +37,16 @@ export default {
       try {
         // 手动构造 URL 编码的数据
         const formData = `username=${encodeURIComponent(this.username)}&password=${encodeURIComponent(this.password)}`;
-        const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-        const requestUrl = BASE_URL + '/token';
         
         console.log('=== 登录调试 ===');
         console.log('用户名:', this.username);
         console.log('密码:', this.password);
         console.log('表单数据:', formData);
-        console.log('请求URL:', requestUrl);
+        console.log('请求URL:', '/api/token');
         
         uni.request({
-            url: requestUrl,
+            url: '/api/token',
             method: 'POST',
-            timeout: 100000, // 增加超时时间至 100s 以应对 Render 冷启动
             header: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
