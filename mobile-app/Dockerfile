@@ -1,7 +1,7 @@
 FROM node:18 as build-stage
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com && npm install
 COPY . .
 ENV VITE_API_BASE_URL=/api
 RUN npm run build:h5
