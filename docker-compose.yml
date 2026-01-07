@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   backend:
     build:
@@ -11,6 +17,7 @@ services:
       - SECRET_KEY=replace_this_secret_in_prod
     depends_on:
       - db
+    logging: *default-logging
     networks:
       - app-network
 
@@ -23,6 +30,7 @@ services:
       - "8001:80"
     depends_on:
       - backend
+    logging: *default-logging
     networks:
       - app-network
 
@@ -35,6 +43,7 @@ services:
       - "8002:80"
     depends_on:
       - backend
+    logging: *default-logging
     networks:
       - app-network
 
@@ -48,6 +57,7 @@ services:
       - POSTGRES_DB=postgres
     volumes:
       - db_data:/var/lib/postgresql/data
+    logging: *default-logging
     networks:
       - app-network
 
