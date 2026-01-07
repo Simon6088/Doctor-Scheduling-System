@@ -7,6 +7,13 @@
           <text class="arrow">▼</text>
         </view>
       </picker>
+      
+      <picker @change="onDoctorChange" :range="doctorList" range-key="full_name" :value="selectedDoctorIndex">
+        <view class="doctor-picker">
+          <text>{{ selectedDoctorIndex >= 0 ? doctorList[selectedDoctorIndex].full_name : '选择医生' }}</text>
+          <text class="arrow">▼</text>
+        </view>
+      </picker>
     </view>
 
     <view class="schedule-list">
@@ -44,6 +51,9 @@ export default {
       selectedDate: '',
       schedules: [],
       shiftTypes: [],
+      doctorList: [],
+      selectedDoctorIndex: -1,
+      selectedDoctorId: null,
       loading: false
     }
   },
@@ -51,7 +61,7 @@ export default {
     // 默认显示今天
     const today = new Date();
     this.selectedDate = this.formatDate(today);
-    this.fetchSchedules();
+    this.fetchDoctorList();
   },
   methods: {
     formatDate(date) {
@@ -59,6 +69,37 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    },
+    async fetchDoctorList() {
+      try {
+        // 获取当前用户信息
+        const currentUser = await request({ url: '/users/me' });
+        const myDepartmentId = currentUser.department_id;
+        
+        if (!myDepartmentId) {
+          uni.showToast({ title: '您未分配科室', icon: 'none' });
+          return;
+        }
+        
+        // 获取同科室的所有医生
+        const allUsers = await request({ url: '/users/' });
+        this.doctorList = allUsers.filter(u => u.department_id === myDepartmentId && u.role === 'doctor');
+        
+        // 默认不选择任何医生，显示全部
+        this.fetchSchedules();
+      } catch (error) {
+        console.error('获取医生列表失败:', error);
+        uni.showToast({ title: '获取医生列表失败', icon: 'none' });
+      }
+    },
+    onDoctorChange(e) {
+      this.selectedDoctorIndex = e.detail.value;
+      if (this.selectedDoctorIndex >= 0) {
+        this.selectedDoctorId = this.doctorList[this.selectedDoctorIndex].id;
+      } else {
+        this.selectedDoctorId = null;
+      }
+      this.fetchSchedules();
     },
     // Removed fetchMyDepartment as its logic is now part of fetchSchedules
     async fetchSchedules() {
@@ -74,19 +115,22 @@ export default {
           return;
         }
         
-        // 2. 并行获取所需数据
-        // 直接利用后端API进行科室和日期过滤
+        // 2. 构建查询参数
+        let queryParams = `department_id=${myDepartmentId}&start_date=${this.selectedDate}&end_date=${this.selectedDate}`;
+        if (this.selectedDoctorId) {
+          queryParams += `&doctor_id=${this.selectedDoctorId}`;
+        }
+        
+        // 3. 并行获取所需数据
         const [schedulesData, allUsers, shiftTypesData] = await Promise.all([
-          request({ 
-            url: `/schedules/?department_id=${myDepartmentId}&start_date=${this.selectedDate}&end_date=${this.selectedDate}` 
-          }),
+          request({ url: `/schedules/?${queryParams}` }),
           request({ url: '/users/' }),
           request({ url: '/shift-types/' })
         ]);
 
         this.shiftTypes = shiftTypesData;
         
-        // 3. 组装展示数据
+        // 4. 组装展示数据
         this.schedules = schedulesData.map(schedule => {
           const doctor = allUsers.find(u => u.id === schedule.doctor_id);
           // 使用松散比较 (==) 以防 ID 类型不一致

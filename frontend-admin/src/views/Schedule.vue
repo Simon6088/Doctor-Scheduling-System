@@ -9,6 +9,14 @@
         </div>
       </template>
       
+      <!-- Department Filter -->
+      <div style="margin-bottom: 20px;">
+        <el-select v-model="selectedDepartment" placeholder="选择科室" clearable @change="fetchSchedules" style="width: 200px;">
+          <el-option label="全部科室" :value="null" />
+          <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
+        </el-select>
+      </div>
+      
       <el-table :data="schedules" style="width: 100%">
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column label="医生" width="200">
@@ -39,8 +47,14 @@
     <!-- Generate Dialog -->
     <el-dialog v-model="showDialog" title="生成排班" width="500px">
       <el-form :model="generateForm" label-width="100px">
+        <el-form-item label="选择科室">
+          <el-select v-model="generateForm.departmentId" placeholder="选择科室" clearable style="width: 100%;">
+            <el-option label="全部科室" :value="null" />
+            <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="开始日期">
-          <el-date-picker v-model="generateForm.startDate" type="date" placeholder="选择日期" />
+          <el-date-picker v-model="generateForm.startDate" type="date" placeholder="选择日期" style="width: 100%;" />
         </el-form-item>
         <el-form-item label="天数">
           <el-input-number v-model="generateForm.days" :min="1" :max="30" />
@@ -56,11 +70,17 @@
     <el-dialog v-model="showPublishDialog" title="发布排班" width="500px">
       <el-form :model="publishForm" label-width="100px">
         <el-alert title="发布后医生可见，且换班需审批" type="warning" :closable="false" style="margin-bottom:20px;" />
+        <el-form-item label="选择科室">
+          <el-select v-model="publishForm.departmentId" placeholder="选择科室" clearable style="width: 100%;">
+            <el-option label="全部科室" :value="null" />
+            <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="开始日期">
-            <el-date-picker v-model="publishForm.startDate" type="date" />
+            <el-date-picker v-model="publishForm.startDate" type="date" style="width: 100%;" />
         </el-form-item>
         <el-form-item label="结束日期">
-            <el-date-picker v-model="publishForm.endDate" type="date" />
+            <el-date-picker v-model="publishForm.endDate" type="date" style="width: 100%;" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -79,13 +99,16 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 const schedules = ref([]);
 const doctors = ref([]);
 const shiftTypes = ref([]);
+const departments = ref([]);
+const selectedDepartment = ref(null);
 const showDialog = ref(false);
 const showPublishDialog = ref(false);
 const generating = ref(false);
 const publishing = ref(false);
 const generateForm = ref({
   startDate: new Date().toISOString().split('T')[0],
-  days: 7
+  days: 7,
+  departmentId: null
 });
 // Default publish range: Current Month? Or Next 30 days?
 const today = new Date();
@@ -93,15 +116,33 @@ const nextMonth = new Date();
 nextMonth.setDate(today.getDate() + 30);
 const publishForm = ref({
     startDate: today.toISOString().split('T')[0],
-    endDate: nextMonth.toISOString().split('T')[0]
+    endDate: nextMonth.toISOString().split('T')[0],
+    departmentId: null
 });
 
 const fetchSchedules = async () => {
   try {
-    const response = await api.get('/schedules/');
+    let url = '/schedules/';
+    const params = new URLSearchParams();
+    if (selectedDepartment.value) {
+      params.append('department_id', selectedDepartment.value);
+    }
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+    const response = await api.get(url);
     schedules.value = response.data;
   } catch (error) {
     ElMessage.error('获取排班失败');
+  }
+};
+
+const fetchDepartments = async () => {
+  try {
+    const response = await api.get('/departments/');
+    departments.value = response.data;
+  } catch (error) {
+    console.error('获取科室列表失败');
   }
 };
 
@@ -159,7 +200,11 @@ const handleGenerate = async () => {
     const startDate = generateForm.value.startDate.toISOString ? 
       generateForm.value.startDate.toISOString().split('T')[0] : 
       generateForm.value.startDate;
-    await api.post(`/schedules/generate?start_date=${startDate}&days=${generateForm.value.days}`);
+    let url = `/schedules/generate?start_date=${startDate}&days=${generateForm.value.days}`;
+    if (generateForm.value.departmentId) {
+      url += `&department_id=${generateForm.value.departmentId}`;
+    }
+    await api.post(url);
     ElMessage.success('排班生成成功');
     showDialog.value = false;
     await fetchSchedules();
@@ -177,7 +222,11 @@ const handlePublish = async () => {
     const s = publishForm.value.startDate.toISOString ? publishForm.value.startDate.toISOString().split('T')[0] : publishForm.value.startDate;
     const e = publishForm.value.endDate.toISOString ? publishForm.value.endDate.toISOString().split('T')[0] : publishForm.value.endDate;
     
-    await api.post(`/schedules/publish?start_date=${s}&end_date=${e}`);
+    let url = `/schedules/publish?start_date=${s}&end_date=${e}`;
+    if (publishForm.value.departmentId) {
+      url += `&department_id=${publishForm.value.departmentId}`;
+    }
+    await api.post(url);
     ElMessage.success('发布成功');
     showPublishDialog.value = false;
     await fetchSchedules();
@@ -206,6 +255,7 @@ const handleDelete = async (id) => {
 };
 
 onMounted(async () => {
+  await fetchDepartments();
   await fetchDoctors();
   await fetchShiftTypes();
   await fetchSchedules();
